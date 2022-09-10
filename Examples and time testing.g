@@ -53,11 +53,11 @@ for i in tests do
 	for j in tests do
 		now := Runtime();;
 		# passing optional argument through here for RWS as we have altered the default reqriting system to make it work
-		Add(fixed_length, get_reduced_words(g, j, i, kb_g));;
+		Add(fixed_length, GetReducedWords(g, j, i, kb_g));;
 		Add(fixed_length_time_gen, Runtime() - now);;
 		
 		now := Runtime();;
-		big_func(g, j, i, 0.5, kb_g);;
+		GetVisualMatrix(g, j, i, 0.5, kb_g);;
 		Add(fixed_length_time_mat, Runtime() - now);;
 		
 	od;;
@@ -67,9 +67,9 @@ for i in tests do
 od;;
 
 
-times_matrix_word_metric := [];;
-times_matrix_gromov_distance := [];;
-times_matrix_visual_metric := [];;
+times_matrix_WordMetric := [];;
+times_matrix_GromovProduct := [];;
+times_matrix_VisualMetric := [];;
 
 visual_matrices := [];;
 
@@ -79,37 +79,37 @@ for i in words_matrix do
 	visual_length_time := [];;
 	for j in i do
 		now := Runtime();;
-		dist_mat_words(kb_g, j);;
+		VisualMatrix_words(kb_g, j);;
 		Add(word_length_time, Runtime() - now);
 		
 		now := Runtime();;
-		dist_mat_gromo(kb_g, j);;
+		VisualMatrix_gromo(kb_g, j);;
 		Add(gromo_length_time, Runtime() - now);
 		
 		now := Runtime();;
-		dist_mat(kb_g, j, 0.5);;
+		VisualMatrix(kb_g, j, 0.5);;
 		Add(visual_length_time, Runtime() - now);
 	od;
-	Add(times_matrix_word_metric, word_length_time);;
-	Add(times_matrix_gromov_distance, gromo_length_time);;
-	Add(times_matrix_visual_metric, visual_length_time);;
+	Add(times_matrix_WordMetric, word_length_time);;
+	Add(times_matrix_GromovProduct, gromo_length_time);;
+	Add(times_matrix_VisualMetric, visual_length_time);;
 od;
 
 
 name := Filename(DirectoryCurrent( ), "times_matrix_word_generation.csv");
-print_mat(times_matrix_word_generation, name);
+PrintMatrix(times_matrix_word_generation, name);
 
 name := Filename(DirectoryCurrent( ), "times_matrix_complete.csv");
-print_mat(times_matrix_complete, name);
+PrintMatrix(times_matrix_complete, name);
 
-name := Filename(DirectoryCurrent( ), "times_matrix_gromov_distance.csv");
-print_mat(times_matrix_gromov_distance, name);
+name := Filename(DirectoryCurrent( ), "times_matrix_GromovProduct.csv");
+PrintMatrix(times_matrix_GromovProduct, name);
 
-name := Filename(DirectoryCurrent( ), "times_matrix_visual_metric.csv");
-print_mat(times_matrix_visual_metric, name);
+name := Filename(DirectoryCurrent( ), "times_matrix_VisualMetric.csv");
+PrintMatrix(times_matrix_VisualMetric, name);
 
-name := Filename(DirectoryCurrent( ), "times_matrix_word_metric.csv");
-print_mat(times_matrix_word_metric, name);
+name := Filename(DirectoryCurrent( ), "times_matrix_WordMetric.csv");
+PrintMatrix(times_matrix_WordMetric, name);
 
 # the bryce group
 

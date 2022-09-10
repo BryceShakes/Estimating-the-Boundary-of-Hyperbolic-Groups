@@ -2,45 +2,6 @@
 
 LoadPackage("kbmag");;
 
-# f = input of group 
-# n = number of words to generate from f
-# l = word length to generate (must be a scalar)
-# this works by generating all elements whose words freely reduced words have length l
-# then selecting randomly from these elements
-# this is a very slow way of generating points on a sphere for a group, would not reccomend unless you want points from a very small group
-# in this case its recommended as first generates all points in that sphere, so terminates once there are no unique points left (even if n is not met yet)
-get_reduced_words_2:= function(f,n,l)
-    local kb_f, rando, words, points, pos, i;
-    rando:=RandomSource(IsMersenneTwister, 42);
-    if IsKBMAGRewritingSystemRep(f) then
-        words:=EnumerateReducedWords(f,l,l);
-        points:=[];
-        for i in [1..n] do
-            pos := Random(rando,1,Length(words));
-            Add(points, words[pos]);
-            Remove(words, pos);
-            if Length(words) = 0 then
-                break;
-            fi;
-        od;
-    else
-        kb_f:=KBMAGRewritingSystem(f);
-        KnuthBendix(kb_f);;
-        words:=EnumerateReducedWords(kb_f,l,l);
-        points:=[];
-        for i in [1..n] do
-            pos := Random(rando,1,Length(words));
-            Add(points, words[pos]);
-            Remove(words, pos);
-            if Length(words) = 0 then
-                break;
-            fi;
-        od;
-    fi;
-    Unbind(words);
-    return points;;
-end;
-
 # g = input of group
 # n = number of words to generate from g
 # l = length of these words
@@ -49,13 +10,13 @@ end;
 # it generates a random word in the free group, larger than l, reduces it according to the knuth bendix and returns subword of length l of the reduced word (if possible)
 # is a lot faster as it does not require generation of all words which for large l is not feasible
 # if n is greater than the number of words of length l however it will keep trying to generate more, until it has tried a total of 5n times
-get_reduced_words := function(g, n, l, rws...)
+GetReducedWords := function(g, n, l, rws...)
 	local words, kb_g, i, w;
 	words := [];;
 	AssignGeneratorVariables(g);;
 	if Length(rws) = 0 then
 		kb_g := KBMAGRewritingSystem(g);;
-		KnuthBendix(kb_g);;
+		AutomaticStructure(kb_g);;
 	else 
 		kb_g := rws[1];;
 	fi;
@@ -74,13 +35,54 @@ get_reduced_words := function(g, n, l, rws...)
 	return DuplicateFreeList(words);;
 end;
 
+
+# f = input of group 
+# n = number of words to generate from f
+# l = word length to generate (must be a scalar)
+# this works by generating all elements whose words freely reduced words have length l
+# then selecting randomly from these elements
+# this is a very slow way of generating points on a sphere for a group, would not reccomend unless you want points from a very small group
+# in this case its recommended as first generates all points in that sphere, so terminates once there are no unique points left (even if n is not met yet)
+GetReducedWords2:= function(f,n,l)
+    local kb_f, rando, words, points, pos, i;
+    rando:=RandomSource(IsMersenneTwister, 42);
+    if IsKBMAGRewritingSystemRep(f) then
+        words:=EnumerateReducedWords(f,l,l);
+        points:=[];
+        for i in [1..n] do
+            pos := Random(rando,1,Length(words));
+            Add(points, words[pos]);
+            Remove(words, pos);
+            if Length(words) = 0 then
+                break;
+            fi;
+        od;
+    else
+        kb_f:=KBMAGRewritingSystem(f);
+        AutomaticStructure(kb_f);;
+        words:=EnumerateReducedWords(kb_f,l,l);
+        points:=[];
+        for i in [1..n] do
+            pos := Random(rando,1,Length(words));
+            Add(points, words[pos]);
+            Remove(words, pos);
+            if Length(words) = 0 then
+                break;
+            fi;
+        od;
+    fi;
+    Unbind(words);
+    return points;;
+end;
+
+
 # f = input of group, words generated are from underlying free group
 # n = number of words to generate from free group of f
 # l = length of these words
 # generates n*1.25 words of length l, dedupes and returns n remaining words
 # this assumes you are generating free words of a large radius so the dedupe does not remove more than 0.25*n
 # very fast for generating lots of long free words
-get_free_words := function(f, n, l)
+GetFreeWords := function(f, n, l)
     local words, i;
     AssignGeneratorVariables(f);;
     words:=[];;
@@ -101,20 +103,22 @@ end;;
 # it then reduces these words according to the rules of g and returns them
 # interesting for seeing where reduction occurs although not used in my work
 # this assumes you are generating free words of a large radius so the dedupe does not remove too many
-bryce_func := function(g, n, l)
+GetReducedFreeWords := function(g, n, l)
     local un_words, kb_g, red_words, j;;
-    un_words:=get_free_words(g, n*2, l);;
+    un_words:= GetFreeWords(g, n*2, l);;
 	if IsKBMAGRewritingSystemRep(g) then
 		kb_g := g;;
 	else
 		kb_g:=KBMAGRewritingSystem(g);;
-		KnuthBendix(kb_g);;
+		AutomaticStructure(kb_g);;
 	fi;;
     red_words:=[];;
     for j in un_words do
         Add(red_words, ReducedForm(kb_g, j));;
-        red_words:=DuplicateFreeList(red_words);;
         if Length(red_words) = n then
+			red_words:=DuplicateFreeList(red_words);;
+		fi;
+		if Length(red_words) = n then
             break;
         fi;
     od;
@@ -126,13 +130,13 @@ end;;
 # g = input of group or already confluent RWS (if the former will produce standard knuthbendix, if latter will use the rules passed)
 # w1,w2 = a word representing an element in g
 # returns the word_length of w1^-1*w2 according to the knuth bendix, even if w1 and w2 are not in normal form, output will be.
-word_metric := function(g, w1, w2)
+WordMetric := function(g, w1, w2)
     local kb_g;
     if IsKBMAGRewritingSystemRep(g) then
         return Length(ReducedForm(g, w1^-1*w2));;
     else
         kb_g:=KBMAGRewritingSystem(g);;
-        KnuthBendix(kb_g);;
+        AutomaticStructure(kb_g);;
         return Length(ReducedForm(kb_g, w1^-1*w2));;
     fi;
 end;;
@@ -143,7 +147,7 @@ end;;
 # w3 = optional base point, default is the identity
 # returns the gromov product of w1 and w2 at w3
 # even if inputs are not of normal form, will take the most reduced version of w1,2,3 according to the rules of g
-gromov_distance := function(g, w1, w2, w3...)
+GromovProduct := function(g, w1, w2, w3...)
     local kb_g, id;
     if Length(w3)=0 then
         id := w1^-1*w1;;
@@ -154,48 +158,46 @@ gromov_distance := function(g, w1, w2, w3...)
         return 1.0/0.0;;
     else
         if IsKBMAGRewritingSystemRep(g) then
-            return (word_metric(g, id, w1) + word_metric(g, id, w2) - word_metric(g, w1, w2))*0.5;;
+            return (WordMetric(g, id, w1) + WordMetric(g, id, w2) - WordMetric(g, w1, w2))*0.5;;
         else
             kb_g:=KBMAGRewritingSystem(g);;
-            KnuthBendix(kb_g);;
-                return (word_metric(kb_g, id, w1) + word_metric(kb_g, id, w2) - word_metric(kb_g, w1, w2))*0.5;;
+            AutomaticStructure(kb_g);;
+                return (WordMetric(kb_g, id, w1) + WordMetric(kb_g, id, w2) - WordMetric(kb_g, w1, w2))*0.5;;
         fi;
     fi;
 end;
 
-# grom = gromov distance (or any integer)
+# grom = gromov product (or any integer)
 # eps = number > 0
 # returns e^(-eps * gromo), according to boundary for hyperbolic group
-visual_metric := function(grom, eps)
+VisualMetric := function(grom, eps)
     return Exp(Float(-eps*grom));;
 end;;
 
 # g = input of group or already confluent RWS (if the former will produce standard knuthbendix, if latter will use the rules passed)
 # words = list of words in the generating set of g
 # eps = number >0
-# given a list of words returns the dissimilarity matrix where Dij = visual_metric(gromov_distance(g, i, j), eps)
+# given a list of words returns the dissimilarity matrix where Dij = VisualMetric(GromovProduct(g, i, j), eps)
 # note that default base point of the gromov product is always the identity
-dist_mat := function(g, words, eps)
+VisualMatrix := function(g, words, eps)
     local matrix, i, j, row, gromo, vis, kb_g;
     matrix := [];;
     if IsKBMAGRewritingSystemRep(g) then
         for i in words do
             row :=[];;
             for j in words do
-                gromo := gromov_distance(g, i, j);;
-                vis := visual_metric(gromo, eps);;
+                vis := VisualMetric(GromovProduct(g, i, j), eps);;
                 Add(row, vis);;
             od;
             Add(matrix, row);;
         od;
     else
         kb_g:=KBMAGRewritingSystem(g);;
-        KnuthBendix(kb_g);;
+        AutomaticStructure(kb_g);;
         for i in words do
             row :=[];
             for j in words do
-                gromo := gromov_distance(kb_g, i, j);;
-                vis := visual_metric(gromo, eps);;
+                vis := VisualMetric(GromovProduct(g, i, j), eps);;
                 Add(row, vis);;
             od;
             Add(matrix, row);;
@@ -206,27 +208,27 @@ end;
 
 # g = input of group or already confluent RWS (if the former will produce standard knuthbendix, if latter will use the rules passed)
 # words = list of words in the generating set of g
-# given a list of words returns the dissimilarity matrix where Dij = gromov_distance(g, i, j)
+# given a list of words returns the dissimilarity matrix where Dij = GromovProduct(g, i, j)
 # note that default base point of the gromov product is always the identity
-dist_mat_gromo := function(g, words)
+GromovProductMatrix := function(g, words)
     local matrix, i, j, row, gromo, kb_g;
     matrix := [];;
     if IsKBMAGRewritingSystemRep(g) then
         for i in words do
             row :=[];;
             for j in words do
-                gromo := gromov_distance(g, i, j);;
+                gromo := GromovProduct(g, i, j);;
                 Add(row, gromo);;
             od;
             Add(matrix, row);;
         od;
     else
         kb_g:=KBMAGRewritingSystem(g);;
-        KnuthBendix(kb_g);;
+        AutomaticStructure(kb_g);;
         for i in words do
             row :=[];;
             for j in words do
-                gromo := gromov_distance(kb_g, i, j);;
+                gromo := GromovProduct(kb_g, i, j);;
                 Add(row, gromo);;
             od;
             Add(matrix, row);;
@@ -237,26 +239,26 @@ end;
 
 # g = input of group or already confluent RWS (if the former will produce standard knuthbendix, if latter will use the rules passed)
 # words = list of words in the generating set of g
-# given a list of words returns the dissimilarity matrix where Dij = word_metric(g, i, j)
-dist_mat_words := function(g, words)
+# given a list of words returns the dissimilarity matrix where Dij = WordMetric(g, i, j)
+WordMetricMatrix := function(g, words)
     local matrix, i, j, row, w_met, kb_g;
     matrix := [];;
     if IsKBMAGRewritingSystemRep(g) then
         for i in words do
             row :=[];;
             for j in words do
-                w_met := word_metric(g, i, j);;
+                w_met := WordMetric(g, i, j);;
                 Add(row, w_met);;
             od;
             Add(matrix, row);;
         od;
     else
         kb_g:=KBMAGRewritingSystem(g);;
-        KnuthBendix(kb_g);;
+        AutomaticStructure(kb_g);;
         for i in words do
             row :=[];;
             for j in words do
-                w_met := word_metric(g, i, j);;
+                w_met := WordMetric(g, i, j);;
                 Add(row, w_met);;
             od;
             Add(matrix, row);;
@@ -271,13 +273,13 @@ end;
 # eps = number > 0
 # rws = optional entry where you can pass an already confluent system, for cases when the default knuth bendix routine on g doesnt work 
 # generates n words in a list (the list is called words) of length l representing elements in g, same method as get_reduced_words
-# then returns the matrix by doing dist_mat(g, words, eps). this takes into account the optional argument RWS for g as in the dist_mat functions
-big_func := function(g, n, l, eps, rws...)
+# then returns the matrix by doing VisualMatrix(g, words, eps). this takes into account the optional argument RWS for g as in the VisualMatrix functions
+GetVisualMatrix := function(g, n, l, eps, rws...)
     local kb_g, words, i, w;
     AssignGeneratorVariables(g);;
 	if Length(rws) = 0 then
 		kb_g:=KBMAGRewritingSystem(g);;
-		KnuthBendix(kb_g);;
+		AutomaticStructure(kb_g);;
 	else
 		kb_g := rws[1];;
 	fi;
@@ -295,18 +297,18 @@ big_func := function(g, n, l, eps, rws...)
 		fi;
 	od;
 	words:=DuplicateFreeList(words);;
-    return dist_mat(kb_g, words, eps);;
+    return VisualMatrix(kb_g, words, eps);;
 end;;
 
 # mat = matrix or list
 # printing to csv in GAP is messy as far as i can tell, the second argument of PrintCSV requiring a list of records
-# this function takes the input mat (presumably from a dist_mat function) and returns the record which can then be used to print it
+# this function takes the input mat (presumably from a -----Matrix function) and returns the record which can then be used to print it
 MatToRec := function(mat);
 	return(rec(1 := mat));;
 end;;
 
 # very similar to MatToRec, returns the record of the input, but each row is a separate entry
-MatToRec_not_the_best := function(mat)
+MatToRec2 := function(mat)
 	local r, i;
 	r := rec();;
 	for i in mat do
@@ -320,11 +322,11 @@ end;;
 # l = length of these words
 # eps = number > 0
 # generates n words in a list (the list is called words) of length l representing elements in g, same method as get_reduced_words
-# generates a matrix by doing dist_mat(g, words, eps). this takes into account the optional argument RWS for g as in the dist_mat functions
+# generates a matrix by doing VisualMatrix(g, words, eps)
 # returns MatToRec of this matrix
-# note that this does not account for an optional input of RWS like big_func does
-big_func_rec := function(g, n, l, eps)
-	return MatToRec(big_func(g, n, l, eps));;
+# note that this does not account for an optional input of RWS like VisualMatrix does
+GetVisualMatrixRec := function(g, n, l, eps)
+	return MatToRec(GetVisualMatrix(g, n, l, eps));;
 end;;
 
 
@@ -333,7 +335,7 @@ end;;
 # my recommended way to use PrintCSV so that the python code can interpret it, once again PrintCSV is messy.
 # Once again printing is messy, this function takes an input (mat) and desired location (name) and produces a csv of mat at name
 # This forces the csv to print the matrix in a way that the python code can then interpet (although the python code can also interpet doing PrintCSV on mattorec and MatToRec_not_the_best objects also)
-print_mat := function(mat, path)
+PrintMatrix := function(mat, path)
 	PrintCSV(path, [MatToRec(mat)]);;
 end;;
 

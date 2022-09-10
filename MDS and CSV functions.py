@@ -1,6 +1,6 @@
 # %%
 
-from time import time
+# libraries
 import numpy as np
 import pandas as pd
 from sklearn import manifold
@@ -10,11 +10,13 @@ import os
 # %%        my function that should work
 
 
-# takes the input of an n x n array (symmetrical) with pairwise distances
-
-def Bryce_picture(dist, metric=True, title = None):
+# takes the input of an n x n array (symmetrical) with pairwise distances, called a distance or dissimilarity matrix
+# performs MDS, either metric or non based on input, with fixed (although tuned) parameters
+# returns the points as cartesian co-ords of specified dimension in Euclidean space
+# also plots the graph if dimensions = 2
+def plot_from_matrix(dist, metric=True, title = None, dimensions = 2):
     if metric == False:
-        mds = manifold.MDS(n_components=2,
+        mds = manifold.MDS(n_components=dimensions,
                        max_iter=100000,
                        n_init = 5,
                        eps=1e-15,
@@ -22,7 +24,7 @@ def Bryce_picture(dist, metric=True, title = None):
                        dissimilarity="precomputed")
         new = mds.fit(dist).embedding_
     elif metric:
-        mds = manifold.MDS(n_components=2,
+        mds = manifold.MDS(n_components=dimensions,
                max_iter=10000,
                n_init = 5,
                eps=1e-3,
@@ -30,12 +32,15 @@ def Bryce_picture(dist, metric=True, title = None):
                dissimilarity="precomputed",
                verbose = 1)
         new = mds.fit(dist).embedding_
-    plt.scatter(new[:,0], new[:,1])
-    if title != None:
-        plt.title(title)
-    plt.show()
+    if dimensions == 2:
+        plt.scatter(new[:,0], new[:,1])
+        if title != None:
+            plt.title(title)
+        plt.show()
+    return new
 
-def csv_to_mat(path):
+# takes the CSV output from distance-matrix-generation-functions.g and converts into a numpy array
+def csv_to_matrix(path):
     assert os.path.isfile(path)
     df = pd.read_csv(path)
     if df.shape[1] > 1:
@@ -47,39 +52,23 @@ def csv_to_mat(path):
         arr = np.array(eval(df.iloc[0,0]))
     return arr
 
-def bryce_draw_from_raw(path, metric = True, title = None):
-    arr = csv_to_mat(path)
-    Bryce_picture(arr, metric=metric, title=title)
+# combines plot_from_matrix and csv_to_matrix. 
+# supply with path as location of CSV file from GAP and equal parameters to 
+def plot_from_csv(path, metric = True, title = None,  dimensions =2 ):
+    arr = csv_to_matrix(path)
+    return plot_from_matrix(arr, metric=metric, title=title, dimensions = dimensions)
 
-# not my code, altered ever so slightly from https://gist.github.com/tuelwer/b7ad6d2e69a823d3302f2f9996f783e6
-def check_triangle_inequality_verbose(D):
-    """ Returns true iff the matrix D fulfills
-    the triangle inequaltiy.
-    """
-    n = len(D)
-    valid = True
-    for i in range(n):
-        for j in range(i, n):
-            for k in range(n):
-                if k == j or k == i:
-                    continue
-                if D[i][j] > D[i][k] + D[k][j]:
-                    print('Invalid triple:', D[i][j],  D[i][k], D[k][j])
-                    valid = False
-    return valid
 
 # not my code, edited slightly to nest in function from https://stackoverflow.com/questions/54055761/checking-triangle-inequality-in-a-massive-numpy-matrix
-def check_triangle_inequality(D):
-    N = len(D)
-    test = True
-    for i in range(N):
+def check_triangle_ineq(D):
+    for i in range(len(D)):
         for j in range(i):
-            test = test & all(D[i,j] <= D[i,:] + D[:,j])
-            if not test :
-                return test
-    return test
+            if not all(D[i,j] <= D[i,:] + D[:,j]):
+                return False
+    return True
 
 # count the number of triangles in of D that violate the traingle inequality. from a total of nC3, where D is an nxn matrix
+# again not my code, was altered from the check_triangle_ineq
 def measure_triangle_ineq(D):
     N = len(D)
     test = 0
@@ -92,7 +81,7 @@ def measure_triangle_ineq(D):
 
 path = r"C:/Users/Bryce/AppData/Local/Packages/CanonicalGroupLimited.Ubuntu22.04LTS_79rhkp1fndgsc/LocalState/rootfs/home/bryce/gap-4.11.1/genus_2_vis.csv"
 
-bryce_draw_from_raw(path, True);
+plot_from_csv(path, False);
     
 
 # %%
@@ -102,16 +91,16 @@ path = r"C:/Users/Bryce/AppData/Local/Packages/CanonicalGroupLimited.Ubuntu22.04
 path2 = r"C:/Users/Bryce/AppData/Local/Packages/CanonicalGroupLimited.Ubuntu22.04LTS_79rhkp1fndgsc/LocalState/rootfs/home/bryce/gap-4.11.1/free_vis_mat_noid.csv" 
 
 
-a1 = csv_to_mat(path)
-a2 = csv_to_mat(path2)
+a1 = csv_to_matrix(path)
+a2 = csv_to_matrix(path2)
 
-Bryce_picture(a1, metric = True)
-Bryce_picture(a2, metric = True, title = "Free group, n = 1000, epsilon = 1")
+plot_from_matrix(a1, metric = True)
+plot_from_matrix(a2, metric = True, title = "Free group, n = 1000, epsilon = 1")
 
 #bryce_draw_from_raw(path)
 
 
-# %% testing speeds
+# %% testing speeds and tuning manifold params
 
 testing = [
     [False, 1e-15, 100000],
@@ -151,11 +140,11 @@ list = ["surface_l_100_e_05", "surface_l_100_e_1", "surface_l_100_e_2","surface_
 
 for i in list:
     path = r"C:/Users/Bryce/AppData/Local/Packages/CanonicalGroupLimited.Ubuntu22.04LTS_79rhkp1fndgsc/LocalState/rootfs/home/bryce/gap-4.11.1/"+i+".csv"
-    print(check_triangle_inequality(csv_to_mat(path)));
+    print(check_triangle_ineq(csv_to_matrix(path)));
 
 for i in list:
     path = r"C:/Users/Bryce/AppData/Local/Packages/CanonicalGroupLimited.Ubuntu22.04LTS_79rhkp1fndgsc/LocalState/rootfs/home/bryce/gap-4.11.1/"+i+".csv"
-    bryce_draw_from_raw(path, True, title = i);
+    plot_from_csv(path, True, title = i);
 
 D = np.array([[0, 3, 5, 9, 2],
              [1, 0, 4, 7, 1 ],
@@ -167,6 +156,16 @@ P = np.array([[0, 4, 100],
              [4, 0, 5,],
              [100, 5, 0,]])
 
-
-    
 measure_triangle_ineq(a1)
+
+#%%
+
+import decimal
+
+a = decimal.Decimal(4*3**999)
+format(a, '.2e')
+
+b = decimal.Decimal(1e+120)
+
+c = decimal.Decimal((1000*8*4*3**999) /b )
+format(c, '.2e')
