@@ -16,7 +16,7 @@ GetReducedWords := function(g, n, l, rws...)
 	AssignGeneratorVariables(g);;
 	if Length(rws) = 0 then
 		kb_g := KBMAGRewritingSystem(g);;
-		AutomaticStructure(kb_g);;
+		KnuthBendix(kb_g);;
 	else 
 		kb_g := rws[1];;
 	fi;
@@ -59,7 +59,7 @@ GetReducedWords2:= function(f,n,l)
         od;
     else
         kb_f:=KBMAGRewritingSystem(f);
-        AutomaticStructure(kb_f);;
+        KnuthBendix(kb_f);;
         words:=EnumerateReducedWords(kb_f,l,l);
         points:=[];
         for i in [1..n] do
@@ -110,7 +110,7 @@ GetReducedFreeWords := function(g, n, l)
 		kb_g := g;;
 	else
 		kb_g:=KBMAGRewritingSystem(g);;
-		AutomaticStructure(kb_g);;
+		KnuthBendix(kb_g);;
 	fi;;
     red_words:=[];;
     for j in un_words do
@@ -133,11 +133,11 @@ end;;
 WordMetric := function(g, w1, w2)
     local kb_g;
     if IsKBMAGRewritingSystemRep(g) then
-        return Length(ReducedForm(g, w1^-1*w2));;
+        return Length(ReducedForm(g, (w1^-1)*w2));;
     else
         kb_g:=KBMAGRewritingSystem(g);;
-        AutomaticStructure(kb_g);;
-        return Length(ReducedForm(kb_g, w1^-1*w2));;
+        KnuthBendix(kb_g);;
+        return Length(ReducedForm(kb_g, (w1^-1)*w2));;
     fi;
 end;;
 
@@ -161,7 +161,7 @@ GromovProduct := function(g, w1, w2, w3...)
             return (WordMetric(g, id, w1) + WordMetric(g, id, w2) - WordMetric(g, w1, w2))*0.5;;
         else
             kb_g:=KBMAGRewritingSystem(g);;
-            AutomaticStructure(kb_g);;
+            KnuthBendix(kb_g);;
                 return (WordMetric(kb_g, id, w1) + WordMetric(kb_g, id, w2) - WordMetric(kb_g, w1, w2))*0.5;;
         fi;
     fi;
@@ -193,7 +193,7 @@ VisualMatrix := function(g, words, eps)
         od;
     else
         kb_g:=KBMAGRewritingSystem(g);;
-        AutomaticStructure(kb_g);;
+        KnuthBendix(kb_g);;
         for i in words do
             row :=[];
             for j in words do
@@ -224,7 +224,7 @@ GromovProductMatrix := function(g, words)
         od;
     else
         kb_g:=KBMAGRewritingSystem(g);;
-        AutomaticStructure(kb_g);;
+        KnuthBendix(kb_g);;
         for i in words do
             row :=[];;
             for j in words do
@@ -254,7 +254,7 @@ WordMetricMatrix := function(g, words)
         od;
     else
         kb_g:=KBMAGRewritingSystem(g);;
-        AutomaticStructure(kb_g);;
+        KnuthBendix(kb_g);;
         for i in words do
             row :=[];;
             for j in words do
@@ -279,7 +279,7 @@ GetVisualMatrix := function(g, n, l, eps, rws...)
     AssignGeneratorVariables(g);;
 	if Length(rws) = 0 then
 		kb_g:=KBMAGRewritingSystem(g);;
-		AutomaticStructure(kb_g);;
+		KnuthBendix(kb_g);;
 	else
 		kb_g := rws[1];;
 	fi;

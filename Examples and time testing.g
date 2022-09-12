@@ -1,4 +1,8 @@
 
+##########################
+#	preliminaries
+##########################
+
 # run this just to make things more interesting
 ColorPrompt(true);
 
@@ -11,7 +15,7 @@ DirectoryContents(DirectoryCurrent());
 
 #see that the desireable file is in the list (in position 20), so will assign it
 # this can be done without referring to the item and just pass its name as a string in arg 2 of FileName
-readme:= Filename(DirectoryCurrent(),DirectoryContents(DirectoryCurrent())[20]);;
+readme:= Filename(DirectoryCurrent(),DirectoryContents(DirectoryCurrent())[20]);
 
 #Then read it in, may be useful to check that permissions exist with 
 IsReadableFile(readme);
@@ -23,6 +27,10 @@ Read(readme);
 RANDOM_SEED(1);
 
 
+##########################
+#	setting up genus-2
+##########################
+
 f := FreeGroup("a1","b1","a2","b2");
 AssignGeneratorVariables(f);
 
@@ -31,14 +39,21 @@ g := f/[Comm(a1,b1)*Comm(a2,b2)];
 kb_g := KBMAGRewritingSystem(g);;
 
 # if you were to just knuth bendix with this it would not work, result in a fail and a infinite rules
-# however changing the order using below code according to example 6.3 of Knuth bendix on groups.pdf   does work
-#KnuthBendix(kb_g);
+# however changing the order using below code according to example 6.3 of https://www.sciencedirect.com/science/article/pii/S0747717108800934 does work
 ReorderAlphabetOfKBMAGRewritingSystem(kb_g, (3,5)(4,6));
 KnuthBendix(kb_g);
+
+# this will work regardless of ordering although is exceptionally slow
+# AutomaticStructure(kb_g);
 
 
 #treat this as a baseline to keep to the importance of it in the discovery of such things. 
 # Also been studied quite well so comparisons against my results are not difficult.
+
+
+##########################
+#	Time Testing
+##########################
 
 tests := [10,100,1000];;
 
@@ -111,22 +126,84 @@ PrintMatrix(times_matrix_VisualMetric, name);
 name := Filename(DirectoryCurrent( ), "times_matrix_WordMetric.csv");
 PrintMatrix(times_matrix_WordMetric, name);
 
-# the bryce group
+
+##########################
+#	Testing multiple groups
+##########################
 
 
+f := FreeGroup("a","b");
+AssignGeneratorVariables(f);
+rels := [(a*b)*(a*b^2)*(a*b^3)*(a*b^4)*(a*b^5)*(a*b^6)*(a*b^7)*(a*b^8)*(a*b^9)*(a*b^10)*(a*b^11)*(a*b^12)*(a*b^13)*(a*b^14)*(a*b^15)*(a*b^16)*(a*b^17)*(a*b^18)*(a*b^19)*(a*b^20)];
+g:= f/rels;
+GroupSatisfiesCPrime(g, 1/6, true );
 
+SetInfoLevel(InfoRWS, 2);
+kb_g := KBMAGRewritingSystem(g);;
+ReorderAlphabetOfKBMAGRewritingSystem(kb_g, (1,2,4,3));
+# this results in failure
+AutomaticStructure(kb_g);
+
+
+# group referenced in strebel
+f := FreeGroup("a","b","c","d");
+AssignGeneratorVariables(f);
+
+rels := [a^2*b^2*c^2*d^2];
+g:= f/rels;
+
+GroupSatisfiesCPrime(g, 1/6, true );
+kb_g := KBMAGRewritingSystem(g);;
+AutomaticStructure(kb_g);
+
+strebel := GetVisualMatrix(g, 250, 300, 0.25, kb_g);;
+PrintMatrix (strebel, Filename(DirectoryCurrent( ), "strebel.csv"));
+
+
+# the bryce group - i do not lay claim to this, someone almost certainly came up with it before me
 f := FreeGroup("a","b","c","d");
 AssignGeneratorVariables(f);
 rels := [a^2*b^2*c^2*d*a^-2*b^-2*c^-2, b^2*d^2*a^2*c*b^-2*d^-2*a^-2];
 g := f/rels;
 GroupSatisfiesC(g, 1/6 );
 kb_g := KBMAGRewritingSystem(g);;
-KnuthBendix(kb_g);
-# this fails :( 
+#KnuthBendix(kb_g); this fails :( 
+
+ReorderAlphabetOfKBMAGRewritingSystem(kb_g, (3,5)(4,6));
+# KnuthBendix(kb_g); this also fails :(
 
 kb_g := KBMAGRewritingSystem(g);;
-ReorderAlphabetOfKBMAGRewritingSystem(kb_g, (3,5)(4,6));
+AutomaticStructure(kb_g);
+
+bryce := GetVisualMatrix(g, 250, 300, 0.25, kb_g);;
+PrintMatrix (bryce, Filename(DirectoryCurrent( ), "bryce.csv"));
+
+##########################
+#	Not C'(1/6) groups
+##########################
+
+f := FreeGroup("a","b");
+AssignGeneratorVariables(f);
+
+rels := [a^2, (a*b)^2];
+g:= f/rels;
+kb_g := KBMAGRewritingSystem(g);;
 KnuthBendix(kb_g);
-# this also fails :(
+
+#slightly different approach due to much  smaller group
+# in fact there are only 4 points, luckily GetReducedWords2 knows this
+words := GetReducedWords2(kb_g, 100,300);
+dihedral := VisualMatrix(kb_g, words, 0.25);;
+PrintMatrix (dihedral, Filename(DirectoryCurrent( ), "dihedral.csv"));
 
 
+
+f := FreeGroup("a","b","c");
+AssignGeneratorVariables(f);
+
+rels := [Comm(a,b),Comm(a,c), Comm(a,c)];
+g:= f/rels;
+kb_g := KBMAGRewritingSystem(g);;
+KnuthBendix(kb_g);
+z3 := GetVisualMatrix(g, 500, 300, 0.25, kb_g);;
+PrintMatrix (z3, Filename(DirectoryCurrent( ), "z3.csv"));

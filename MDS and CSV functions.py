@@ -1,11 +1,20 @@
 # %%
 
 # libraries
+from time import time
 import numpy as np
 import pandas as pd
 from sklearn import manifold
+from sklearn.metrics.pairwise import euclidean_distances
 import matplotlib.pyplot as plt
 import os
+
+# %%
+
+# This may cause issues, only run it if you have a qt5 toolkit 
+# allows for plots to be interacted with, remove hashtag and run
+# %matplotlib qt
+
 
 # %%        my function that should work
 
@@ -14,32 +23,45 @@ import os
 # performs MDS, either metric or non based on input, with fixed (although tuned) parameters
 # returns the points as cartesian co-ords of specified dimension in Euclidean space
 # also plots the graph if dimensions = 2
-def plot_from_matrix(dist, metric=True, title = None, dimensions = 2):
+def plot_from_matrix(D, metric=True, title = None, dimensions = 2):
     if metric == False:
         mds = manifold.MDS(n_components=dimensions,
                        max_iter=100000,
                        n_init = 5,
-                       eps=1e-15,
+                       eps=1e-3,
                        metric = False,
                        dissimilarity="precomputed")
-        new = mds.fit(dist).embedding_
+        new = mds.fit(D).embedding_
     elif metric:
         mds = manifold.MDS(n_components=dimensions,
                max_iter=10000,
                n_init = 5,
                eps=1e-3,
                metric = True,
-               dissimilarity="precomputed",
-               verbose = 1)
-        new = mds.fit(dist).embedding_
+               dissimilarity="precomputed")
+        new = mds.fit(D).embedding_
     if dimensions == 2:
+        plt.figure(figsize=(12.80,7.20))
         plt.scatter(new[:,0], new[:,1])
+        if title != None:
+            plt.title(title)
+        plt.xticks([])
+        plt.yticks([])
+        plt.show()
+    elif dimensions == 3:
+        fig = plt.figure(figsize=(19.20,10.80))
+        ax = fig.add_subplot(projection='3d')
+        ax.scatter(new[:,0], new[:,1], new[:,2])
+        ax.xaxis.set_ticklabels([])
+        ax.yaxis.set_ticklabels([])
+        ax.zaxis.set_ticklabels([])
         if title != None:
             plt.title(title)
         plt.show()
     return new
 
 # takes the CSV output from distance-matrix-generation-functions.g and converts into a numpy array
+# accepts a csv where the record printed is any from 'GetVisualMatrixRec', 'MatToRec2', 'MatToRec' or direct result of PrintMatrix
 def csv_to_matrix(path):
     assert os.path.isfile(path)
     df = pd.read_csv(path)
@@ -67,8 +89,8 @@ def check_triangle_ineq(D):
                 return False
     return True
 
-# count the number of triangles in of D that violate the traingle inequality. from a total of nC3, where D is an nxn matrix
-# again not my code, was altered from the check_triangle_ineq
+# count the number of triangles in of D that violate the traingle inequality. from a total of NC3, where D is an NxN matrix
+# again not my code, was altered from the check_triangle_ineq to count exceptions
 def measure_triangle_ineq(D):
     N = len(D)
     test = 0
@@ -77,30 +99,9 @@ def measure_triangle_ineq(D):
             test += sum(D[i,j] > D[i,:] + D[:,j])
     return test
 
-# %% genus 2 surface
-
-path = r"C:/Users/Bryce/AppData/Local/Packages/CanonicalGroupLimited.Ubuntu22.04LTS_79rhkp1fndgsc/LocalState/rootfs/home/bryce/gap-4.11.1/genus_2_vis.csv"
-
-plot_from_csv(path, False);
-    
-
-# %%
-
-#  C:/Users/Bryce/AppData/Local/Packages/CanonicalGroupLimited.Ubuntu22.04LTS_79rhkp1fndgsc/LocalState/rootfs/home/bryce/gap-4.11.1
-path = r"C:/Users/Bryce/AppData/Local/Packages/CanonicalGroupLimited.Ubuntu22.04LTS_79rhkp1fndgsc/LocalState/rootfs/home/bryce/gap-4.11.1/Surface_500.csv"
-path2 = r"C:/Users/Bryce/AppData/Local/Packages/CanonicalGroupLimited.Ubuntu22.04LTS_79rhkp1fndgsc/LocalState/rootfs/home/bryce/gap-4.11.1/free_vis_mat_noid.csv" 
-
-
-a1 = csv_to_matrix(path)
-a2 = csv_to_matrix(path2)
-
-plot_from_matrix(a1, metric = True)
-plot_from_matrix(a2, metric = True, title = "Free group, n = 1000, epsilon = 1")
-
-#bryce_draw_from_raw(path)
-
-
 # %% testing speeds and tuning manifold params
+path = r"--Path to dissimilarity matrix of free group was here--"
+a1 = csv_to_matrix(path)
 
 testing = [
     [False, 1e-15, 100000],
@@ -126,6 +127,7 @@ for i in testing :
            n_init = 5,
            eps = i[1],
            metric = i[0],
+           n_jobs = 6,
            dissimilarity = "precomputed")
     new = mds.fit(a1).embedding_
     plt.scatter(new[:,0], new[:,1])
@@ -133,32 +135,23 @@ for i in testing :
     plt.show()
     time_arr.append([i,time() - now - sum([x[1] for x in time_arr])])
     
-# %% testing with genus 2 surface groups
+# %% testing with some groups
 
-list = ["surface_l_100_e_05", "surface_l_100_e_1", "surface_l_100_e_2","surface_l_300_e_05","surface_l_300_e_1",
-       "surface_l_300_e_2","surface_l_500_e_05","surface_l_500_e_1","surface_l_500_e_2"]
 
-for i in list:
-    path = r"C:/Users/Bryce/AppData/Local/Packages/CanonicalGroupLimited.Ubuntu22.04LTS_79rhkp1fndgsc/LocalState/rootfs/home/bryce/gap-4.11.1/"+i+".csv"
-    print(check_triangle_ineq(csv_to_matrix(path)));
+list1 = ["strebel", "bryce", "dihedral", "z3"]
 
-for i in list:
-    path = r"C:/Users/Bryce/AppData/Local/Packages/CanonicalGroupLimited.Ubuntu22.04LTS_79rhkp1fndgsc/LocalState/rootfs/home/bryce/gap-4.11.1/"+i+".csv"
-    plot_from_csv(path, True, title = i);
 
-D = np.array([[0, 3, 5, 9, 2],
-             [1, 0, 4, 7, 1 ],
-             [5, 4, 0, 8, 6],
-             [9, 7, 8, 0, 9],
-             [2, 1, 6, 9, 0]])
+for i in list1:
+    path = r"--INSERT FOLDER PATH HERE--"+i+".csv"
+    mat = csv_to_matrix(path)
+    print(check_triangle_ineq(mat))
+    plot_from_matrix(mat, True, title = i+'2d')
+    plot_from_matrix(mat, True, title = i+'3d', dimensions = 3)
+    #plot_from_matrix(path, False, title = i+'non-metric')
 
-P = np.array([[0, 4, 100],
-             [4, 0, 5,],
-             [100, 5, 0,]])
 
-measure_triangle_ineq(a1)
 
-#%%
+#%% getting numbers for points in sphere of free group.
 
 import decimal
 
@@ -166,6 +159,42 @@ a = decimal.Decimal(4*3**999)
 format(a, '.2e')
 
 b = decimal.Decimal(1e+120)
-
 c = decimal.Decimal((1000*8*4*3**999) /b )
 format(c, '.2e')
+
+
+
+# %% 3-D to 2-D plot
+
+points = pd.DataFrame(columns=['x','y','z'])
+
+for i in range(1000):
+    coords = np.array([])
+    # generate 4 gaus points
+    for j in range(3):
+        coords =  np.append(coords, np.random.normal())
+    # normalise to fit on unit sphere
+    coords = coords/(np.sum(coords**2)**0.5)
+    # add to df
+    points.loc[i] = coords
+    
+
+fig = plt.figure(figsize=(19.20,10.80))
+ax = fig.add_subplot(projection='3d')
+ax.scatter(points['x'], points['y'], points['z'], color = 'r')
+plt.show()
+
+points_arr = points.to_numpy()
+dist_mat = euclidean_distances(points_arr, points_arr)
+
+mds_3d = manifold.MDS(n_components=2,
+       max_iter=10000,
+       n_init = 5,
+       eps=1e-3,
+       metric = True,
+       dissimilarity="precomputed")
+new = mds_3d.fit(dist_mat).embedding_
+
+plt.figure(figsize=(12.80,7.20))
+plt.scatter(new[:,0], new[:,1], color ='r')
+plt.show()
